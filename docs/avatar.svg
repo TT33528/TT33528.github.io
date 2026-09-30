@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="TT 手记">
+  <title>TT 手记</title>
+  <style>
+    .bg { fill: #1c2024; }
+    .caret { stroke: #f5f7fa; }
+    .cursor { stroke: #58a6ff; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #e6edf3; }
+      .caret { stroke: #1c2024; }
+      .cursor { stroke: #0b6bcb; }
+    }
+  </style>
+  <circle class="bg" cx="64" cy="64" r="64"/>
+  <path class="caret" d="M36 34 L64 64 L36 94" fill="none" stroke-width="12"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="cursor" d="M78 94 H100" fill="none" stroke-width="12" stroke-linecap="round"/>
+</svg>
