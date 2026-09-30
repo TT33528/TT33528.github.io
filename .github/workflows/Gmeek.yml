@@ -54,7 +54,19 @@ jobs:
           cp -a /opt/Gmeek/docs ${{ github.workspace }} 
           cp -a /opt/Gmeek/backup ${{ github.workspace }} 
           cp /opt/Gmeek/blogBase.json ${{ github.workspace }} 
-          
+
+      # 自定义主题资源：static/ 是唯一真源，每次构建同步进被发布的 docs/assets/。
+      # 好处：改样式只需改 static/ 下的小文件，config.json 只保留 <link>/<script> 引用；
+      # 同时即使 Gmeek 某天重建清理了 docs/，样式也不会丢。
+      - name: Sync custom assets into docs
+        run: |
+          mkdir -p "${{ github.workspace }}/docs/assets"
+          if [ -d "${{ github.workspace }}/static" ]; then
+            cp -f "${{ github.workspace }}/static/"* "${{ github.workspace }}/docs/assets/"
+          fi
+          echo "===== docs/assets ====="
+          ls -la "${{ github.workspace }}/docs/assets" || true
+
       - name: update html
         run: |
           git config --local user.email "$(jq -r ".email" config.json)"

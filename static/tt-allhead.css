@@ -1,0 +1,812 @@
+/* 本文件注入到 config.json 的 allHead 字段 —— 全站所有页面 <head> 内，且位于 base <style> 之前。
+   因此：凡是要压过 base 的规则一律用 html 前缀提权；页面级覆盖（index.css / post.css）注入在后面，可正常覆盖本文件。*/
+
+/* ==========================================================================
+   1. 设计 token（全站唯一来源，index.css / post.css 只消费不重新定义）
+   ========================================================================== */
+
+:root {
+    /* 排版尺度：正文可视宽度 720px，两侧 24px 内边距 —— 窄栏阅读 */
+    --tt-read: 720px;
+    --tt-gutter: 24px;
+    --tt-radius: 10px;
+    --tt-radius-sm: 6px;
+
+    /* 零外部依赖：只用系统字体 */
+    --tt-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    --tt-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono",
+        Menlo, "Microsoft YaHei", monospace;
+
+    /* 语义色：优先消费 Primer 的 CSS 变量，Primer 加载失败时退回 -fb 兜底值。
+       -fb 值在下方亮/暗两块里各自重定义，所以「Primer 挂了 + 暗色」也不会变成白底黑字。 */
+    --tt-fg-raw: #1f2328;
+    --tt-fg-muted-raw: #59636e;
+    --tt-fg-subtle-raw: #818b98;
+    --tt-bg-raw: #ffffff;
+    --tt-bg-subtle-raw: #f6f8fa;
+    --tt-border-raw: #d1d9e0;
+    --tt-border-muted-raw: rgba(31, 35, 40, .13);
+
+    --tt-fg: var(--color-fg-default, var(--tt-fg-raw));
+    --tt-fg-muted: var(--color-fg-muted, var(--tt-fg-muted-raw));
+    --tt-fg-subtle: var(--color-fg-subtle, var(--tt-fg-subtle-raw));
+    --tt-bg: var(--color-canvas-default, var(--tt-bg-raw));
+    --tt-bg-subtle: var(--color-canvas-subtle, var(--tt-bg-subtle-raw));
+    --tt-border: var(--color-border-default, var(--tt-border-raw));
+    --tt-border-muted: var(--color-border-muted, var(--tt-border-muted-raw));
+
+    /* 唯一强调色（不依赖 Primer，亮暗各自定义，保证「只有一个彩色」） */
+    --tt-accent: #0b6bcb;
+    --tt-accent-weak: rgba(11, 107, 203, .08);
+    --tt-accent-line: rgba(11, 107, 203, .30);
+
+    /* 中性装饰 */
+    --tt-shadow: 0 10px 30px rgba(31, 35, 40, .10), 0 1px 2px rgba(31, 35, 40, .06);
+    --tt-shadow-sm: 0 1px 2px rgba(31, 35, 40, .07);
+    --tt-overlay: rgba(16, 20, 26, .90);
+    --tt-chip-wash: rgba(255, 255, 255, .62);
+    --tt-speed: .18s;
+    --tt-radius-pill: 999px;
+}
+
+/* 动画时长集中管理，reduced-motion 时统一归零（见文件末尾） */
+html[data-color-mode="light"] { color-scheme: light; }
+html[data-color-mode="dark"] { color-scheme: dark; }
+html[data-color-mode="auto"] { color-scheme: light dark; }
+
+html[data-color-mode="dark"] {
+    --tt-fg-raw: #e6edf3;
+    --tt-fg-muted-raw: #9198a1;
+    --tt-fg-subtle-raw: #6e7681;
+    --tt-bg-raw: #0d1117;
+    --tt-bg-subtle-raw: #151b23;
+    --tt-border-raw: #3d444d;
+    --tt-border-muted-raw: rgba(240, 246, 252, .11);
+
+    --tt-accent: #58a6ff;
+    --tt-accent-weak: rgba(88, 166, 255, .12);
+    --tt-accent-line: rgba(88, 166, 255, .35);
+
+    --tt-shadow: 0 12px 32px rgba(1, 4, 9, .55), 0 1px 2px rgba(1, 4, 9, .4);
+    --tt-shadow-sm: 0 1px 2px rgba(1, 4, 9, .4);
+    --tt-overlay: rgba(1, 4, 9, .92);
+    --tt-chip-wash: rgba(13, 17, 23, .70);
+}
+
+/* auto 模式：跟随系统暗色时同步我们的自有 token */
+@media (prefers-color-scheme: dark) {
+    html[data-color-mode="auto"] {
+        --tt-fg-raw: #e6edf3;
+        --tt-fg-muted-raw: #9198a1;
+        --tt-fg-subtle-raw: #6e7681;
+        --tt-bg-raw: #0d1117;
+        --tt-bg-subtle-raw: #151b23;
+        --tt-border-raw: #3d444d;
+        --tt-border-muted-raw: rgba(240, 246, 252, .11);
+
+        --tt-accent: #58a6ff;
+        --tt-accent-weak: rgba(88, 166, 255, .12);
+        --tt-accent-line: rgba(88, 166, 255, .35);
+
+        --tt-shadow: 0 12px 32px rgba(1, 4, 9, .55), 0 1px 2px rgba(1, 4, 9, .4);
+        --tt-shadow-sm: 0 1px 2px rgba(1, 4, 9, .4);
+        --tt-overlay: rgba(1, 4, 9, .92);
+        --tt-chip-wash: rgba(13, 17, 23, .70);
+    }
+}
+
+/* ==========================================================================
+   2. 全局基底（覆盖 base.html 的 body 规则，必须 html 前缀）
+   ========================================================================== */
+
+html {
+    background: var(--tt-bg);
+}
+
+html body {
+    box-sizing: border-box;
+    min-width: 200px;
+    max-width: calc(var(--tt-read) + var(--tt-gutter) * 2);
+    margin: 0 auto;
+    padding: 40px var(--tt-gutter) 0;
+    font-family: var(--tt-font);
+    font-size: 17px;
+    font-weight: 400;
+    line-height: 1.8;
+    color: var(--tt-fg);
+    background: var(--tt-bg);
+    overflow-wrap: break-word;
+    word-break: normal;
+    -webkit-text-size-adjust: 100%;
+    /* 中英混排：给拉丁字母一点呼吸，中文标点不挤压 */
+    letter-spacing: .006em;
+    text-rendering: optimizeLegibility;
+}
+
+html #content {
+    min-width: 0;
+}
+
+/* 页头：三段式（左标题 / 右操作），窄屏自动换行 */
+html #header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--tt-border-muted);
+}
+
+/* 页头右侧图标按钮：首页/标签页/文章页三处共用。
+   Gmeek 的主题脚本会往按钮上写行内 style.color（亮色 #ff5000 / 暗色 #00f0ff），
+   inline 样式只能靠 !important 压掉，否则会破坏「只保留一个强调色」。
+   图标字形本身已经表示状态（太阳/月亮/同步），丢掉这个彩色不影响可用性。 */
+html #header .title-right .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    color: var(--tt-fg-muted) !important;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    box-shadow: none;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color var(--tt-speed) ease, background-color var(--tt-speed) ease,
+        border-color var(--tt-speed) ease;
+}
+
+html #header .title-right .btn:hover {
+    color: var(--tt-accent) !important;
+    background: var(--tt-bg-subtle);
+    border-color: var(--tt-border);
+}
+
+html #header .title-right .btn:focus-visible {
+    outline: 2px solid var(--tt-accent);
+    outline-offset: 2px;
+}
+
+html #header .title-right .octicon {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    color: inherit;
+}
+
+/* 页脚 */
+html #footer {
+    margin-top: 72px;
+    padding: 22px 0 34px;
+    border-top: 1px solid var(--tt-border-muted);
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--tt-fg-subtle);
+}
+
+html #footer1,
+html #footer2 {
+    display: block;
+}
+
+html #footer a {
+    color: var(--tt-fg-muted);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color var(--tt-speed) ease, border-color var(--tt-speed) ease;
+}
+
+html #footer a:hover {
+    color: var(--tt-accent);
+    border-bottom-color: var(--tt-accent-line);
+}
+
+/* ==========================================================================
+   3. tag.html 专用（该页只有本文件生效）
+   ========================================================================== */
+
+html .tagTitle {
+    margin: 0;
+    font-size: clamp(20px, 3vw, 26px);
+    font-weight: 650;
+    line-height: 1.4;
+    letter-spacing: -.01em;
+    color: var(--tt-fg);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+html .title-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 0 auto;
+}
+
+/* 搜索框：去掉 Primer 的方块拼接感，做成一体化胶囊 */
+html .subnav-search {
+    display: flex;
+    align-items: center;
+    width: auto;
+    margin: 0 6px 0 0;
+}
+
+html .subnav-search-input {
+    width: 168px;
+    height: 34px;
+    padding: 0 12px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 34px;
+    color: var(--tt-fg);
+    background: var(--tt-bg-subtle);
+    border: 1px solid var(--tt-border);
+    border-radius: 8px 0 0 8px;
+    box-shadow: none;
+}
+
+html .subnav-search-input:focus {
+    background: var(--tt-bg);
+    border-color: var(--tt-accent);
+    box-shadow: 0 0 0 3px var(--tt-accent-weak);
+    outline: none;
+}
+
+html .subnav-search button {
+    height: 34px;
+    padding: 0 14px;
+    margin-left: -1px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--tt-fg-muted);
+    background: var(--tt-bg-subtle);
+    border: 1px solid var(--tt-border);
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    transition: color var(--tt-speed) ease, background-color var(--tt-speed) ease;
+}
+
+html .subnav-search button:hover {
+    color: var(--tt-accent);
+    background: var(--tt-bg);
+}
+
+/* tag 页自带一个装饰用的放大镜 svg，已有「搜索」按钮，隐藏避免重复 */
+html .subnav-search-icon {
+    display: none;
+}
+
+/* 标签筛选区：与下方列表拉开间距（#taglabel 带行内 margin-bottom，这里不动它） */
+html #taglabel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+html #taglabel + nav.SideNav {
+    margin-top: 18px;
+}
+
+/* 列表容器：把 Primer 的直角边框换成统一的圆角卡片 */
+html nav.SideNav {
+    min-width: 0;
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius);
+    overflow: hidden;
+}
+
+html .notFind {
+    color: var(--tt-fg-subtle);
+}
+
+html .genTime {
+    color: var(--tt-fg-subtle);
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   4. 标签胶囊 .Label —— 元素带行内 background-color（Gmeek 按标签色/年份色注入）。
+      做法：用一层半透明背景提亮/压暗它，既保留原色相，又让文字对比度可控。
+      行内 background-color 不被覆盖，只是被叠加了一层 wash。
+   ========================================================================== */
+
+html .Label {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.6;
+    white-space: nowrap;
+    color: var(--tt-fg);
+    background-image: linear-gradient(var(--tt-chip-wash), var(--tt-chip-wash));
+    border-radius: var(--tt-radius-pill);
+}
+
+html .LabelName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* LabelName 内部是 <object><a style="color:#fff">，行内色必须用 !important 才能纠正 */
+html .Label a {
+    color: inherit !important;
+    text-decoration: none;
+    border-bottom: none;
+}
+
+html .LabelTime {
+    font-variant-numeric: tabular-nums;
+    font-weight: 450;
+}
+
+/* tag.html 的标签按钮：JS 会带行内 padding:4px，这里用内层留白补足视觉呼吸 */
+html #taglabel .Label {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    transition: transform var(--tt-speed) ease, box-shadow var(--tt-speed) ease;
+}
+
+html #taglabel .Label:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--tt-shadow-sm);
+}
+
+html #taglabel .Label:focus-visible {
+    outline: 2px solid var(--tt-accent);
+    outline-offset: 2px;
+}
+
+/* tag 页原有 .Counter 是「白字 + 浅白底」，几乎不可见，这里重做 */
+html #taglabel .Counter {
+    display: inline-block;
+    min-width: 18px;
+    margin-left: 6px;
+    padding: 0 5px;
+    font-size: 11px;
+    line-height: 17px;
+    text-align: center;
+    color: inherit;
+    background-color: rgba(127, 127, 127, .18);
+    border-radius: var(--tt-radius-pill);
+}
+
+/* ==========================================================================
+   5. 自定义组件 —— 由另一个同事的 JS 动态创建，这里只负责好看
+   ========================================================================== */
+
+/* 5.1 顶部阅读进度条 #tt-progress（JS 只写 width，其它全部交给我们） */
+html #tt-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    width: 0;
+    height: 3px;
+    background: var(--tt-accent);
+    border-radius: 0 2px 2px 0;
+    pointer-events: none;
+}
+
+/* 5.2 回到顶部 #tt-top（JS 用 .tt-hide 控制显隐） */
+html #tt-top {
+    position: fixed;
+    right: var(--tt-gutter);
+    bottom: var(--tt-gutter);
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    font-family: var(--tt-font);
+    font-size: 17px;
+    line-height: 1;
+    color: var(--tt-fg-muted);
+    background: var(--tt-bg);
+    border: 1px solid var(--tt-border);
+    border-radius: 50%;
+    box-shadow: var(--tt-shadow-sm);
+    cursor: pointer;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--tt-speed) ease, transform var(--tt-speed) ease,
+        color var(--tt-speed) ease, visibility var(--tt-speed) ease;
+}
+
+html #tt-top:hover {
+    color: var(--tt-accent);
+    border-color: var(--tt-accent-line);
+    transform: translateY(-2px);
+}
+
+html #tt-top:focus-visible {
+    outline: 2px solid var(--tt-accent);
+    outline-offset: 2px;
+}
+
+html #tt-top.tt-hide {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(8px) scale(.92);
+}
+
+/* 5.3 目录开关 #tt-toc-btn（左下角圆形） */
+html #tt-toc-btn {
+    position: fixed;
+    left: var(--tt-gutter);
+    bottom: var(--tt-gutter);
+    z-index: 92;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    height: 42px;
+    padding: 0 14px;
+    font-family: var(--tt-font);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--tt-fg-muted);
+    background: var(--tt-bg);
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius-pill);
+    box-shadow: var(--tt-shadow-sm);
+    cursor: pointer;
+    transition: color var(--tt-speed) ease, border-color var(--tt-speed) ease,
+        transform var(--tt-speed) ease;
+}
+
+html #tt-toc-btn:hover {
+    color: var(--tt-accent);
+    border-color: var(--tt-accent-line);
+    transform: translateY(-2px);
+}
+
+html #tt-toc-btn:focus-visible {
+    outline: 2px solid var(--tt-accent);
+    outline-offset: 2px;
+}
+
+/* 5.4 目录面板 #tt-toc（JS 把 nav#tt-toc 插在 #content 里，这里改为浮层） */
+html #tt-toc {
+    position: fixed;
+    left: var(--tt-gutter);
+    bottom: calc(var(--tt-gutter) + 54px);
+    z-index: 91;
+    box-sizing: border-box;
+    width: min(272px, calc(100vw - var(--tt-gutter) * 2));
+    max-height: min(58vh, 460px);
+    padding: 10px 6px 10px 12px;
+    background: var(--tt-bg);
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius);
+    box-shadow: var(--tt-shadow);
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(10px);
+    transition: opacity var(--tt-speed) ease, transform var(--tt-speed) ease,
+        visibility var(--tt-speed) ease;
+}
+
+html #tt-toc.tt-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+html #tt-toc .tt-toc-list {
+    max-height: min(58vh, 440px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+html #tt-toc .tt-toc-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+html #tt-toc .tt-toc-list::-webkit-scrollbar-thumb {
+    background: var(--tt-border);
+    border-radius: var(--tt-radius-pill);
+}
+
+html #tt-toc a.tt-toc-link {
+    display: block;
+    padding: 5px 10px;
+    font-family: var(--tt-font);
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--tt-fg-muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    border-radius: 0 var(--tt-radius-sm) var(--tt-radius-sm) 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--tt-speed) ease, background-color var(--tt-speed) ease;
+}
+
+html #tt-toc a.tt-toc-link:hover {
+    color: var(--tt-fg);
+    background: var(--tt-bg-subtle);
+}
+
+html #tt-toc a.tt-toc-link.tt-active {
+    color: var(--tt-accent);
+    background: var(--tt-accent-weak);
+    border-left-color: var(--tt-accent);
+    font-weight: 500;
+}
+
+/* 分级缩进：data-level 由 JS 写入（2 / 3 / 4） */
+html #tt-toc a.tt-toc-link[data-level="3"] {
+    padding-left: 24px;
+    font-size: 13px;
+}
+
+html #tt-toc a.tt-toc-link[data-level="4"] {
+    padding-left: 38px;
+    font-size: 12.5px;
+    color: var(--tt-fg-subtle);
+}
+
+/* 宽屏：正文两侧留白足够时，把目录挪到左侧空栏，不再压住正文 */
+@media (min-width: 1280px) {
+    html #tt-toc {
+        top: 88px;
+        bottom: auto;
+        left: 16px;
+        width: 208px;
+        max-height: min(70vh, 560px);
+    }
+
+    html #tt-toc .tt-toc-list {
+        max-height: min(70vh, 540px);
+    }
+}
+
+/* 5.5 图片灯箱 #tt-lightbox */
+html #tt-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: var(--tt-overlay);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    cursor: zoom-out;
+    transition: opacity var(--tt-speed) ease, visibility var(--tt-speed) ease;
+}
+
+html #tt-lightbox.tt-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+html #tt-lightbox img.tt-lightbox-img {
+    max-width: 92vw;
+    max-height: 88vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    background: transparent;
+    border-radius: var(--tt-radius-sm);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, .5);
+    cursor: default;
+}
+
+html #tt-lightbox .tt-lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-family: var(--tt-font);
+    font-size: 22px;
+    line-height: 1;
+    color: rgba(255, 255, 255, .9);
+    background: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color var(--tt-speed) ease, color var(--tt-speed) ease;
+}
+
+html #tt-lightbox .tt-lightbox-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .22);
+}
+
+html #tt-lightbox .tt-lightbox-close:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* 5.6 标题悬停锚点 .tt-anchor（JS 追加在每个标题内部末尾） */
+html .tt-anchor {
+    margin-left: .35em;
+    font-size: .82em;
+    font-weight: 400;
+    color: var(--tt-fg-subtle);
+    text-decoration: none;
+    border-bottom: none;
+    opacity: 0;
+    transition: opacity var(--tt-speed) ease, color var(--tt-speed) ease;
+}
+
+html h1:hover > .tt-anchor,
+html h2:hover > .tt-anchor,
+html h3:hover > .tt-anchor,
+html h4:hover > .tt-anchor,
+html h5:hover > .tt-anchor,
+html h6:hover > .tt-anchor,
+html .tt-anchor:focus-visible {
+    opacity: 1;
+}
+
+html .tt-anchor:hover {
+    color: var(--tt-accent);
+}
+
+/* JS 复制成功时给标题加 .tt-active 做短暂反馈 */
+html .tt-active > .tt-anchor {
+    opacity: 1;
+    color: var(--tt-accent);
+}
+
+/* 触屏设备没有 hover，锚点常驻可点 */
+@media (hover: none) {
+    html .tt-anchor {
+        opacity: .55;
+    }
+}
+
+/* ==========================================================================
+   6. 移动端（≤600px）
+   ========================================================================== */
+
+@media (max-width: 600px) {
+    html body {
+        padding: 22px 18px 0;
+        font-size: 16.5px;
+        line-height: 1.82;
+        letter-spacing: .004em;
+    }
+
+    html #header {
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+    }
+
+    html #footer {
+        margin-top: 52px;
+        padding-bottom: 28px;
+    }
+
+    html #tt-top,
+    html #tt-toc-btn {
+        left: auto;
+        right: 14px;
+        bottom: 14px;
+        width: 38px;
+        min-width: 38px;
+        height: 38px;
+    }
+
+    /* 窄屏只有一个入口：目录按钮挪到右下、回到顶部上方，避免两个浮层打架 */
+    html #tt-toc-btn {
+        right: 14px;
+        bottom: 62px;
+        left: auto;
+    }
+
+    /* 目录面板铺满可用宽度 */
+    html #tt-toc {
+        left: 10px;
+        right: 10px;
+        bottom: auto;
+        top: 10px;
+        width: auto;
+        max-height: 78vh;
+        padding: 14px 8px 14px 14px;
+    }
+
+    html #tt-toc .tt-toc-list {
+        max-height: calc(78vh - 28px);
+    }
+
+    html #tt-toc a.tt-toc-link {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+
+    html #tt-toc a.tt-toc-link[data-level="3"] {
+        padding-left: 26px;
+    }
+
+    html #tt-toc a.tt-toc-link[data-level="4"] {
+        padding-left: 40px;
+    }
+
+    html #tt-lightbox {
+        padding: 12px;
+    }
+
+    html #tt-lightbox img.tt-lightbox-img {
+        max-width: 96vw;
+        max-height: 82vh;
+    }
+
+    html #tt-lightbox .tt-lightbox-close {
+        top: 10px;
+        right: 10px;
+        width: 36px;
+        height: 36px;
+    }
+
+    html .subnav-search-input {
+        width: 100%;
+        min-width: 0;
+    }
+
+    html .Label {
+        font-size: 11.5px;
+    }
+}
+
+/* ==========================================================================
+   7. 降低动态效果
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    html #tt-progress,
+    html #tt-top,
+    html #tt-toc,
+    html #tt-lightbox,
+    html #tt-toc a.tt-toc-link,
+    html #tt-toc-btn,
+    html .tt-anchor,
+    html .Label,
+    html #footer a {
+        transition: none;
+    }
+
+    html #tt-top,
+    html #tt-top.tt-hide,
+    html #tt-toc,
+    html #tt-toc.tt-open,
+    html #tt-toc-btn,
+    html #taglabel .Label:hover {
+        transform: none;
+    }
+}

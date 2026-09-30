@@ -1,0 +1,379 @@
+/* 本文件注入到 config.json 的 indexStyle 字段 —— 只注入首页，位置在 plist 样式之后，
+   是三个文件里最后生效的一个，可覆盖 base.html 与 allhead.css。*/
+
+/* ==========================================================================
+   1. 页头：头像 + 站点名 + 右侧图标按钮
+   ========================================================================== */
+
+/* Gmeek 不同版本首页页头左侧容器是 <h1> 或 <div class="title-left">，两种都兼容 */
+html #header > h1,
+html #header .title-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+html #header .avatar {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 50%;
+    background: var(--tt-bg-subtle);
+    transition: none;
+}
+
+/* base 里的 hover 旋转太跳，极简风不需要 */
+html #header .avatar:hover {
+    transform: none;
+}
+
+html #header .blogTitle,
+html #header h1 a.blogTitle {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-left: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: var(--tt-font);
+    font-size: 20px;
+    font-weight: 650;
+    line-height: 1.4;
+    letter-spacing: -.01em;
+    color: var(--tt-fg);
+    text-decoration: none;
+    vertical-align: baseline;
+}
+
+html #header .blogTitle:hover {
+    color: var(--tt-accent);
+}
+
+html #header .title-right {
+    flex: 0 0 auto;
+}
+
+/* ==========================================================================
+   2. 副标题 + 文章计数
+   ========================================================================== */
+
+/* 副标题是 #content 里的第一个 div（index.js 会把 #tt-count 追加进去） */
+html #content > div:first-of-type {
+    font-size: 14.5px;
+    line-height: 1.75;
+    letter-spacing: .01em;
+    color: var(--tt-fg-muted);
+}
+
+html #tt-count {
+    font-size: 13px;
+    color: var(--tt-fg-subtle);
+    white-space: nowrap;
+}
+
+html #tt-count::before {
+    content: "·";
+    margin: 0 8px;
+    color: var(--tt-fg-subtle);
+}
+
+/* index.js 生成的标签筛选栏 */
+html #tt-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 16px;
+}
+
+html #tt-filter .tt-filter-btn {
+    padding: 5px 12px;
+    font-family: var(--tt-font);
+    font-size: 13px;
+    font-weight: 450;
+    line-height: 1.6;
+    color: var(--tt-fg-muted);
+    background: var(--tt-bg);
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius-pill);
+    box-shadow: none;
+    cursor: pointer;
+    transition: color var(--tt-speed) ease, border-color var(--tt-speed) ease,
+        background-color var(--tt-speed) ease;
+}
+
+html #tt-filter .tt-filter-btn:hover {
+    color: var(--tt-fg);
+    border-color: var(--tt-fg-subtle);
+}
+
+html #tt-filter .tt-filter-btn.tt-active {
+    color: var(--tt-accent);
+    background: var(--tt-accent-weak);
+    border-color: var(--tt-accent-line);
+    font-weight: 500;
+}
+
+html #tt-filter .tt-filter-btn.tt-active:hover {
+    color: var(--tt-accent);
+    border-color: var(--tt-accent);
+}
+
+html #tt-filter .tt-filter-btn:focus-visible {
+    outline: 2px solid var(--tt-accent);
+    outline-offset: 2px;
+}
+
+/* ==========================================================================
+   3. 文章列表：nav.SideNav 卡片化
+   ========================================================================== */
+
+html nav.SideNav {
+    min-width: 0;
+    margin: 0;
+    background: var(--tt-bg);
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius);
+    overflow: hidden;
+}
+
+html nav.SideNav a.SideNav-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    color: var(--tt-fg);
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--tt-border-muted);
+    border-radius: 0;
+    box-shadow: none;
+    transition: background-color var(--tt-speed) ease, box-shadow var(--tt-speed) ease;
+}
+
+html nav.SideNav a.SideNav-item:first-child {
+    border-top: 0;
+}
+
+html nav.SideNav a.SideNav-item:last-child {
+    border-bottom: 0;
+}
+
+html nav.SideNav a.SideNav-item:hover {
+    background: var(--tt-bg-subtle);
+    box-shadow: inset 2px 0 0 var(--tt-accent);
+}
+
+html nav.SideNav a.SideNav-item:focus-visible {
+    outline: 2px solid var(--tt-accent);
+    outline-offset: -2px;
+}
+
+html nav.SideNav a.SideNav-item .SideNav-icon {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin-right: 12px;
+    color: var(--tt-fg-subtle);
+    fill: currentColor;
+    overflow: visible;
+}
+
+html nav.SideNav a.SideNav-item .listTitle {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: .004em;
+    color: var(--tt-fg);
+}
+
+html nav.SideNav a.SideNav-item .listLabels {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* base 把 object 裁成 24x16，会把标签文字切掉，这里放开 */
+html nav.SideNav .listLabels object {
+    display: inline;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+}
+
+html nav.SideNav .listLabels .Label {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin-left: 0;
+    color: var(--tt-fg);
+}
+
+html nav.SideNav .listLabels .Label a {
+    display: inline-block;
+    max-width: 140px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
+}
+
+/* ==========================================================================
+   4. 分页
+   ========================================================================== */
+
+html .paginate-container {
+    margin: 28px 0 0;
+    text-align: center;
+}
+
+html .pagination {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+html .pagination > * {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    font-family: var(--tt-font);
+    font-size: 13.5px;
+    font-weight: 450;
+    font-style: normal;
+    line-height: 1;
+    color: var(--tt-fg-muted);
+    text-decoration: none;
+    background: var(--tt-bg);
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius-sm);
+    box-shadow: none;
+    transition: color var(--tt-speed) ease, border-color var(--tt-speed) ease;
+}
+
+html .pagination a:hover {
+    color: var(--tt-accent);
+    border-color: var(--tt-accent-line);
+}
+
+html .pagination .current,
+html .pagination em.current,
+html .pagination [aria-current="page"] {
+    color: #fff;
+    background: var(--tt-accent);
+    border-color: var(--tt-accent);
+    font-weight: 500;
+}
+
+html .pagination .gap,
+html .pagination .disabled {
+    color: var(--tt-fg-subtle);
+    border-color: transparent;
+    background: transparent;
+}
+
+/* ==========================================================================
+   5. 移动端（≤600px）
+   ========================================================================== */
+
+@media (max-width: 600px) {
+    html #header {
+        gap: 10px;
+    }
+
+    html #header .avatar {
+        width: 34px;
+        height: 34px;
+    }
+
+    /* base 在窄屏隐藏站点名，这里恢复（窄屏更需要知道自己在哪），靠 ellipsis 兜底 */
+    html #header .blogTitle,
+    html #header h1 a.blogTitle {
+        display: block;
+        font-size: 16px;
+    }
+
+    html #content > div:first-of-type {
+        font-size: 13.5px;
+    }
+
+    html #tt-filter {
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    html #tt-filter .tt-filter-btn {
+        padding: 4px 10px;
+        font-size: 12.5px;
+    }
+
+    html nav.SideNav a.SideNav-item {
+        gap: 10px;
+        padding: 12px 14px;
+    }
+
+    html nav.SideNav a.SideNav-item .SideNav-icon {
+        margin-right: 10px;
+    }
+
+    html nav.SideNav a.SideNav-item .listTitle {
+        font-size: 15.5px;
+    }
+
+    html nav.SideNav .listLabels {
+        gap: 5px;
+    }
+
+    html nav.SideNav .listLabels .Label {
+        font-size: 11.5px;
+        padding: 2px 7px;
+    }
+
+    html nav.SideNav .listLabels .Label a {
+        max-width: 84px;
+    }
+
+    html .paginate-container {
+        margin-top: 22px;
+    }
+
+    html .pagination > * {
+        min-width: 32px;
+        height: 32px;
+        padding: 0 8px;
+        font-size: 13px;
+    }
+}
+
+/* ==========================================================================
+   6. 降低动态效果
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    html nav.SideNav a.SideNav-item,
+    html #tt-filter .tt-filter-btn,
+    html .pagination > *,
+    html #header .blogTitle {
+        transition: none;
+    }
+}

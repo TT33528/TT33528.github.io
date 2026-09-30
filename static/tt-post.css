@@ -1,0 +1,692 @@
+/* 本文件注入到 config.json 的 style 字段 —— 只注入文章页，位于 base <style> 之后，可正常覆盖。
+   所有选择器都加 html 前缀：既要压过 base.html，也要压过注入更早的 allhead.css。*/
+
+/* ==========================================================================
+   1. 文章页页头（吸顶）。post.js 的 headerOffset() 会自动读取 computed position，
+      识别 sticky 并留出偏移，所以这里放心吸顶。
+   ========================================================================== */
+
+html #header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding: 12px 0;
+    margin-bottom: 26px;
+    background: var(--tt-bg);
+    border-bottom: 1px solid var(--tt-border-muted);
+}
+
+html #header .postTitle {
+    margin: 0;
+    min-width: 0;
+    font-family: var(--tt-font);
+    font-size: clamp(23px, 4.2vw, 30px);
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -.012em;
+    color: var(--tt-fg);
+}
+
+html #header .title-right {
+    flex: 0 0 auto;
+}
+
+/* 标题下的标题层级锚点：吸顶时留出页头高度 */
+html #postBody h1,
+html #postBody h2,
+html #postBody h3,
+html #postBody h4,
+html #postBody h5,
+html #postBody h6 {
+    scroll-margin-top: 84px;
+}
+
+/* ==========================================================================
+   2. 正文容器与整体节奏
+   ========================================================================== */
+
+html #postBody {
+    max-width: none;
+    padding-bottom: 40px;
+    font-family: var(--tt-font);
+    font-size: 17px;
+    line-height: 1.8;
+    letter-spacing: .006em;
+    color: var(--tt-fg);
+    border-bottom: 1px solid var(--tt-border-muted);
+}
+
+html #postBody > :first-child {
+    margin-top: 0;
+}
+
+html #postBody > :last-child {
+    margin-bottom: 0;
+}
+
+/* 段落间距给足，中文长文才不挤 */
+html #postBody p {
+    margin: 0 0 1.25em;
+}
+
+html #postBody strong {
+    font-weight: 650;
+    color: var(--tt-fg);
+}
+
+html #postBody em {
+    font-style: italic;
+}
+
+html #postBody small {
+    font-size: .85em;
+    color: var(--tt-fg-muted);
+}
+
+html #postBody abbr[title] {
+    text-decoration: none;
+    border-bottom: 1px dashed var(--tt-border);
+}
+
+html #postBody mark {
+    padding: .1em .25em;
+    color: inherit;
+    background: var(--tt-accent-weak);
+    border-radius: 3px;
+}
+
+html #postBody .g-emoji {
+    font-size: 1.15em;
+    line-height: 1;
+    vertical-align: -.12em;
+}
+
+/* ==========================================================================
+   3. 标题层级
+   ========================================================================== */
+
+html #postBody h1,
+html #postBody h2,
+html #postBody h3,
+html #postBody h4,
+html #postBody h5,
+html #postBody h6 {
+    position: relative;
+    font-family: var(--tt-font);
+    font-weight: 650;
+    line-height: 1.45;
+    letter-spacing: -.008em;
+    color: var(--tt-fg);
+}
+
+html #postBody h1 {
+    margin: 0 0 .7em;
+    font-size: 1.62em;
+    font-weight: 700;
+}
+
+html #postBody h2 {
+    margin: 2.1em 0 .85em;
+    padding-bottom: .32em;
+    font-size: 1.42em;
+    border-bottom: 1px solid var(--tt-border-muted);
+}
+
+html #postBody h3 {
+    margin: 1.8em 0 .65em;
+    font-size: 1.2em;
+}
+
+html #postBody h4 {
+    margin: 1.6em 0 .55em;
+    font-size: 1.06em;
+}
+
+html #postBody h5 {
+    margin: 1.5em 0 .5em;
+    font-size: 1em;
+    color: var(--tt-fg-muted);
+}
+
+html #postBody h6 {
+    margin: 1.5em 0 .5em;
+    font-size: .94em;
+    color: var(--tt-fg-subtle);
+}
+
+/* 正文里的「#」锚点计数进目录时会由 JS 剔除，这里只做位置微调 */
+html #postBody h1 .tt-anchor,
+html #postBody h2 .tt-anchor,
+html #postBody h3 .tt-anchor,
+html #postBody h4 .tt-anchor {
+    float: right;
+    font-weight: 400;
+}
+
+/* ==========================================================================
+   4. 列表 / 引用 / 分割线 / 链接
+   ========================================================================== */
+
+html #postBody ul,
+html #postBody ol {
+    margin: 0 0 1.25em;
+    padding-left: 1.45em;
+}
+
+html #postBody ul {
+    list-style: disc;
+}
+
+html #postBody ol {
+    list-style: decimal;
+}
+
+html #postBody ul ul,
+html #postBody ul ol,
+html #postBody ol ul,
+html #postBody ol ol {
+    margin: .35em 0 .4em;
+}
+
+html #postBody li {
+    margin: .35em 0;
+}
+
+html #postBody li > p {
+    margin: 0 0 .5em;
+}
+
+html #postBody li::marker {
+    color: var(--tt-fg-subtle);
+}
+
+/* GitHub 任务列表 */
+html #postBody .task-list-item {
+    list-style: none;
+}
+
+html #postBody .task-list-item + .task-list-item {
+    margin-top: .5em;
+}
+
+html #postBody .contains-task-list {
+    padding-left: .2em;
+}
+
+html #postBody input[type="checkbox"] {
+    margin: 0 .5em 0 0;
+    vertical-align: -.05em;
+    accent-color: var(--tt-accent);
+}
+
+html #postBody blockquote {
+    margin: 0 0 1.35em;
+    padding: .1em 0 .1em 18px;
+    color: var(--tt-fg-muted);
+    background: none;
+    border-left: 3px solid var(--tt-border);
+    border-radius: 0;
+}
+
+html #postBody blockquote > :last-child {
+    margin-bottom: 0;
+}
+
+html #postBody blockquote blockquote {
+    margin-top: .8em;
+}
+
+html #postBody hr {
+    height: 1px;
+    margin: 2.6em 0;
+    background: var(--tt-border-muted);
+    border: 0;
+}
+
+html #postBody a {
+    color: var(--tt-accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: .2em;
+    text-decoration-color: var(--tt-accent-line);
+    transition: text-decoration-color var(--tt-speed) ease, color var(--tt-speed) ease;
+}
+
+html #postBody a:hover {
+    text-decoration-color: currentColor;
+}
+
+html #postBody a:focus-visible {
+    outline: 2px solid var(--tt-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* ==========================================================================
+   5. 图片
+   ========================================================================== */
+
+html #postBody img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 1.7em auto;
+    border-radius: var(--tt-radius-sm);
+    background: transparent;
+    cursor: zoom-in;
+}
+
+html #postBody img[data-tt-nozoom] {
+    cursor: default;
+}
+
+html #postBody p > img:only-child {
+    margin: 1.7em auto;
+}
+
+/* ==========================================================================
+   6. 代码：行内 code、代码块 pre、Gmeek 生成的复制按钮
+   ========================================================================== */
+
+html #postBody code {
+    padding: .16em .4em;
+    font-family: var(--tt-mono);
+    font-size: .875em;
+    line-height: 1.5;
+    color: var(--tt-fg);
+    background-color: var(--tt-bg-subtle);
+    border: 0;
+    border-radius: 5px;
+}
+
+html #postBody pre {
+    margin: 0 0 1.35em;
+    padding: 15px 17px;
+    font-family: var(--tt-mono);
+    font-size: 13.5px;
+    line-height: 1.7;
+    tab-size: 4;
+    color: var(--tt-fg);
+    background-color: var(--tt-bg-subtle);
+    border: 1px solid var(--tt-border-muted);
+    border-radius: var(--tt-radius-sm);
+    overflow: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    word-wrap: normal;
+}
+
+html #postBody pre code {
+    display: inline;
+    padding: 0;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    white-space: pre;
+}
+
+html #postBody div.highlight {
+    margin: 0 0 1.35em;
+    border-radius: var(--tt-radius-sm);
+}
+
+html #postBody div.highlight > pre {
+    margin-bottom: 0;
+}
+
+/* Gmeek 内置脚本把代码块包进 .snippet-clipboard-content 并插入复制按钮 */
+html #postBody .snippet-clipboard-content {
+    position: relative;
+    margin: 0 0 1.35em;
+}
+
+html #postBody .snippet-clipboard-content > pre,
+html #postBody .snippet-clipboard-content > div.highlight,
+html #postBody .snippet-clipboard-content .highlight {
+    margin-bottom: 0;
+}
+
+/* Gmeek 用的是 GitHub 的 <clipboard-copy> 自定义元素；同时兼容 .clipboard-copy 写法 */
+html #postBody clipboard-copy,
+html #postBody .clipboard-copy {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    padding: 3px 9px;
+    font-family: var(--tt-font);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--tt-fg-muted);
+    background: var(--tt-bg);
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius-pill);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--tt-speed) ease, color var(--tt-speed) ease,
+        border-color var(--tt-speed) ease;
+}
+
+html #postBody .snippet-clipboard-content:hover clipboard-copy,
+html #postBody .snippet-clipboard-content:hover .clipboard-copy,
+html #postBody clipboard-copy:focus-visible,
+html #postBody .clipboard-copy:focus-visible,
+html #postBody clipboard-copy.clipboard-copy--visible,
+html #postBody .clipboard-copy.is-visible {
+    opacity: 1;
+}
+
+html #postBody clipboard-copy:hover {
+    color: var(--tt-accent);
+    border-color: var(--tt-accent-line);
+}
+
+/* 复制成功后的气泡：默认隐藏，命中常见可见态选择器时才浮出 */
+html #postBody .copy-feedback {
+    position: absolute;
+    top: 8px;
+    right: 76px;
+    z-index: 2;
+    padding: 3px 9px;
+    font-family: var(--tt-font);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--tt-fg-muted);
+    background: var(--tt-bg);
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius-pill);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--tt-speed) ease;
+}
+
+html #postBody .copy-feedback--visible,
+html #postBody .copy-feedback.is-visible,
+html #postBody .copy-feedback[aria-hidden="false"] {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   7. 表格
+   ========================================================================== */
+
+html #postBody table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 1.4em;
+    border-collapse: collapse;
+    border-spacing: 0;
+    font-size: .94em;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+html #postBody table th,
+html #postBody table td {
+    padding: 8px 13px;
+    border: 1px solid var(--tt-border-muted);
+    text-align: left;
+    vertical-align: top;
+}
+
+html #postBody table th {
+    font-weight: 600;
+    color: var(--tt-fg);
+    background-color: var(--tt-bg-subtle);
+    white-space: nowrap;
+}
+
+html #postBody table tbody tr:nth-child(2n) td {
+    background-color: var(--tt-bg-subtle);
+}
+
+html #postBody table tr {
+    background-color: transparent;
+}
+
+/* ==========================================================================
+   8. GitHub 告警块 .markdown-alert
+   ========================================================================== */
+
+html #postBody .markdown-alert {
+    margin: 0 0 1.4em;
+    padding: 12px 16px;
+    color: var(--tt-fg-muted);
+    background: var(--tt-bg-subtle);
+    border-left: 3px solid var(--tt-border);
+    border-radius: 0 var(--tt-radius-sm) var(--tt-radius-sm) 0;
+}
+
+html #postBody .markdown-alert > :last-child {
+    margin-bottom: 0;
+}
+
+html #postBody .markdown-alert .markdown-alert-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: .45em;
+    font-size: .95em;
+    font-weight: 650;
+    line-height: 1.5;
+    color: var(--tt-fg);
+}
+
+html #postBody .markdown-alert .markdown-alert-title svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    fill: currentColor;
+}
+
+/* 颜色叠加用 background-image 而非 background：
+   这样 --tt-bg-subtle 的底色仍然保留，暗色主题下告警块不会塌成一片。 */
+html #postBody .markdown-alert-note {
+    border-left-color: var(--color-note, #0969da);
+    background-image: linear-gradient(rgba(9, 105, 218, .07), rgba(9, 105, 218, .07));
+}
+
+html #postBody .markdown-alert-note .markdown-alert-title {
+    color: var(--color-note, #0969da);
+}
+
+html #postBody .markdown-alert-tip {
+    border-left-color: var(--color-tip, #1a7f37);
+    background-image: linear-gradient(rgba(26, 127, 55, .07), rgba(26, 127, 55, .07));
+}
+
+html #postBody .markdown-alert-tip .markdown-alert-title {
+    color: var(--color-tip, #1a7f37);
+}
+
+html #postBody .markdown-alert-important {
+    border-left-color: var(--color-important, #8250df);
+    background-image: linear-gradient(rgba(130, 80, 223, .07), rgba(130, 80, 223, .07));
+}
+
+html #postBody .markdown-alert-important .markdown-alert-title {
+    color: var(--color-important, #8250df);
+}
+
+html #postBody .markdown-alert-warning {
+    border-left-color: var(--color-warning, #9a6700);
+    background-image: linear-gradient(rgba(154, 103, 0, .08), rgba(154, 103, 0, .08));
+}
+
+html #postBody .markdown-alert-warning .markdown-alert-title {
+    color: var(--color-warning, #9a6700);
+}
+
+html #postBody .markdown-alert-caution {
+    border-left-color: var(--color-caution, #cf222e);
+    background-image: linear-gradient(rgba(207, 34, 46, .07), rgba(207, 34, 46, .07));
+}
+
+html #postBody .markdown-alert-caution .markdown-alert-title {
+    color: var(--color-caution, #cf222e);
+}
+
+/* ==========================================================================
+   9. 文章底部：阅读统计、评论区
+   ========================================================================== */
+
+/* post.js 追加在 #postBody 末尾的「字数 / 阅读时长」 */
+html #postBody #tt-meta {
+    margin-top: 30px;
+    padding-top: 14px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    letter-spacing: .01em;
+    color: var(--tt-fg-subtle);
+    border-top: 1px solid var(--tt-border-muted);
+}
+
+html #cmButton {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 46px;
+    margin: 40px 0 0;
+    padding: 12px 20px;
+    font-family: var(--tt-font);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--tt-fg-muted);
+    background-color: var(--tt-bg-subtle);
+    border: 1px solid var(--tt-border);
+    border-radius: var(--tt-radius);
+    box-shadow: none;
+    cursor: pointer;
+    transition: color var(--tt-speed) ease, border-color var(--tt-speed) ease,
+        background-color var(--tt-speed) ease;
+}
+
+html #cmButton:hover {
+    color: var(--tt-accent);
+    background-color: var(--tt-bg);
+    border-color: var(--tt-accent-line);
+}
+
+html #cmButton:focus-visible {
+    outline: 2px solid var(--tt-accent);
+    outline-offset: 2px;
+}
+
+html #comments {
+    margin-top: 32px;
+}
+
+html #comments .utterances {
+    max-width: 100%;
+    margin: 0;
+}
+
+html #comments iframe {
+    width: 100%;
+    border: 0;
+}
+
+/* ==========================================================================
+   10. 移动端（≤600px）
+   ========================================================================== */
+
+@media (max-width: 600px) {
+    html #header {
+        padding: 10px 0;
+        margin-bottom: 20px;
+    }
+
+    html #header .postTitle {
+        font-size: 21px;
+        line-height: 1.4;
+    }
+
+    html #postBody {
+        font-size: 16.5px;
+        line-height: 1.82;
+        padding-bottom: 32px;
+    }
+
+    html #postBody h1,
+    html #postBody h2,
+    html #postBody h3,
+    html #postBody h4,
+    html #postBody h5,
+    html #postBody h6 {
+        scroll-margin-top: 72px;
+    }
+
+    html #postBody h1 {
+        font-size: 1.45em;
+    }
+
+    html #postBody h2 {
+        margin-top: 1.8em;
+        font-size: 1.3em;
+    }
+
+    html #postBody h3 {
+        font-size: 1.15em;
+    }
+
+    html #postBody ul,
+    html #postBody ol {
+        padding-left: 1.25em;
+    }
+
+    html #postBody blockquote {
+        padding-left: 14px;
+    }
+
+    html #postBody pre {
+        padding: 13px 14px;
+        font-size: 12.5px;
+        line-height: 1.65;
+    }
+
+    html #postBody table {
+        font-size: .9em;
+    }
+
+    html #postBody table th,
+    html #postBody table td {
+        padding: 7px 10px;
+    }
+
+    html #postBody img {
+        margin: 1.4em auto;
+    }
+
+    html #postBody #tt-meta {
+        margin-top: 24px;
+        font-size: 12px;
+    }
+
+    html #cmButton {
+        margin-top: 28px;
+    }
+
+    html #comments {
+        margin-top: 22px;
+    }
+}
+
+/* ==========================================================================
+   11. 降低动态效果
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    html #postBody a,
+    html #postBody clipboard-copy,
+    html #postBody .clipboard-copy,
+    html #postBody .copy-feedback,
+    html #cmButton {
+        transition: none;
+    }
+}
