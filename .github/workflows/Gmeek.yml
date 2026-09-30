@@ -6,7 +6,14 @@ on:
     types: [opened, edited]
   schedule:
     - cron: "0 16 * * *"
-    
+
+# Gmeek 靠 blogBase.json 增量累积文章/单页，Issue 触发的构建每次只处理一个 Issue。
+# 若短时间连续建/改多个 Issue，会并发跑多个构建，互相覆盖 git push 结果，导致部分内容丢失。
+# 这里强制同一时间只跑一个构建，后续构建排队并基于最新提交，避免竞态。
+concurrency:
+  group: gmeek-build
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Generate blog
